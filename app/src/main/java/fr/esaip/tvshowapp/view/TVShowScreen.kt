@@ -2,6 +2,7 @@ package fr.esaip.tvshowapp.view
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,17 +11,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -55,6 +59,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import fr.esaip.tvshowapp.data.UiState
 import fr.esaip.tvshowapp.data.model.TvShowX
+import fr.esaip.tvshowapp.ui.theme.Blue
+import fr.esaip.tvshowapp.ui.theme.DarkBackground
+import fr.esaip.tvshowapp.ui.theme.DarkCard
+import fr.esaip.tvshowapp.ui.theme.StreamingRed
 import fr.esaip.tvshowapp.ui.theme.Purple80
 import fr.esaip.tvshowapp.ui.theme.PurpleGrey40
 import fr.esaip.tvshowapp.viewmodel.TVShowViewModel
@@ -73,7 +81,7 @@ fun TVShowScreen(
     var searchText by remember { mutableStateOf("") }
 
     Scaffold(
-        containerColor = Purple80,
+        containerColor = DarkBackground,
         topBar = {
             if (isSearching) {
                 TopAppBar(
@@ -118,7 +126,7 @@ fun TVShowScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = PurpleGrey40
+                        containerColor = DarkCard
                     )
                 )
             } else {
@@ -141,7 +149,7 @@ fun TVShowScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = PurpleGrey40
+                        containerColor = DarkCard
                     )
                 )
             }
@@ -156,7 +164,7 @@ fun TVShowScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    CircularProgressIndicator(color = PurpleGrey40)
+                    CircularProgressIndicator(color = StreamingRed)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Chargement...", color = Color.White)
                 }
@@ -214,13 +222,26 @@ fun TVShowScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             IconButton(
+                                onClick = { tvShowViewModel.getTVShows(1) },
+                                enabled = currentPage > 1
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Home,
+                                    contentDescription = "Retour page 1",
+                                    tint = if (currentPage > 1) StreamingRed else Color.Gray
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.width(8.dp))
+                            
+                            IconButton(
                                 onClick = { tvShowViewModel.previousPage() },
                                 enabled = currentPage > 1
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Page précédente",
-                                    tint = if (currentPage > 1) PurpleGrey40 else Color.Gray
+                                    tint = if (currentPage > 1) StreamingRed else Color.Gray
                                 )
                             }
                             
@@ -241,7 +262,7 @@ fun TVShowScreen(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                     contentDescription = "Page suivante",
-                                    tint = PurpleGrey40
+                                    tint = StreamingRed
                                 )
                             }
                         }
@@ -257,24 +278,22 @@ fun TVShowCard(
     tvShow: TvShowX,
     onClick: () -> Unit = {}
 ) {
-    val backgroundColor = when (tvShow.status) {
-        "Running" -> Color(0xFFADD8E6) // Bleu pastel
-        "Ended" -> Color(0xFF90EE90) // Vert pastel
-        "Canceled/Ended" -> Color(0xFFFFB6C1) // Rouge pastel
-        else -> Color(0xFFD3D3D3) // Gris pastel
+    val cardColor = when (tvShow.status) {
+        "Running" -> Blue
+        "Ended" -> StreamingRed
+        else -> Color.Gray
     }
     
     Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp)
+            .height(320.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backgroundColor),
-            verticalArrangement = Arrangement.Center
+                .background(cardColor)
         ) {
             AsyncImage(
                 model = tvShow.imageThumbnailPath,
@@ -282,14 +301,19 @@ fun TVShowCard(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp)
+                    .height(260.dp)
             )
-            Text(
-                text = tvShow.name,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
+            Column(
                 modifier = Modifier.padding(8.dp)
-            )
+            ) {
+                Text(
+                    text = tvShow.name,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    color = Color.White
+                )
+            }
         }
     }
 }

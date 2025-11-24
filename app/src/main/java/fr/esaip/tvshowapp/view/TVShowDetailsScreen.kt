@@ -4,23 +4,29 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -28,6 +34,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,6 +52,9 @@ import coil.compose.AsyncImage
 import fr.esaip.tvshowapp.data.UiState
 import fr.esaip.tvshowapp.data.model.Episode
 import fr.esaip.tvshowapp.data.model.TvShowXX
+import fr.esaip.tvshowapp.ui.theme.DarkBackground
+import fr.esaip.tvshowapp.ui.theme.DarkCard
+import fr.esaip.tvshowapp.ui.theme.StreamingRed
 import fr.esaip.tvshowapp.ui.theme.Purple80
 import fr.esaip.tvshowapp.ui.theme.PurpleGrey40
 import fr.esaip.tvshowapp.viewmodel.TVShowDetailsViewModel
@@ -61,7 +73,7 @@ fun TVShowDetailsScreen(
     val tvShowDetailsState by tvShowDetailsViewModel.tvShowDetailsState.collectAsStateWithLifecycle()
 
     Scaffold(
-        containerColor = Purple80,
+        containerColor = DarkBackground,
         topBar = {
             TopAppBar(
                 title = {
@@ -85,7 +97,7 @@ fun TVShowDetailsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = PurpleGrey40
+                    containerColor = DarkCard
                 )
             )
         }
@@ -99,7 +111,7 @@ fun TVShowDetailsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    CircularProgressIndicator(color = PurpleGrey40)
+                    CircularProgressIndicator(color = StreamingRed)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Chargement des détails...", color = Color.White)
                 }
@@ -135,6 +147,7 @@ fun TVShowDetailsScreen(
                 val tvShow = (tvShowDetailsState as UiState.Success<TvShowXX>).data
                 TVShowDetailsContent(
                     tvShow = tvShow,
+                    viewModel = tvShowDetailsViewModel,
                     modifier = Modifier.padding(innerPadding)
                 )
             }
@@ -145,8 +158,18 @@ fun TVShowDetailsScreen(
 @Composable
 fun TVShowDetailsContent(
     tvShow: TvShowXX,
+    viewModel: TVShowDetailsViewModel,
     modifier: Modifier = Modifier
 ) {
+    val selectedSeason by viewModel.selectedSeason.collectAsStateWithLifecycle()
+    val seasons = tvShow.episodes.map { it.season }.distinct().sorted()
+    
+    val filteredEpisodes = if (selectedSeason != null) {
+        tvShow.episodes.filter { it.season == selectedSeason }
+    } else {
+        tvShow.episodes
+    }
+    
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -167,14 +190,26 @@ fun TVShowDetailsContent(
                 Text(
                     text = tvShow.name,
                     fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Note: ${tvShow.rating} (${tvShow.ratingCount} votes)",
-                    fontSize = 16.sp,
-                    color = Color.Gray
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = "Note",
+                        tint = Color(0xFFFFD700),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+                    Text(
+                        text = "${tvShow.rating}/10 (${tvShow.ratingCount} avis)",
+                        fontSize = 16.sp,
+                        color = Color.Gray
+                    )
+                }
             }
         }
 
@@ -216,14 +251,27 @@ fun TVShowDetailsContent(
         }
 
         item {
-            Text(
-                text = "Épisodes (${tvShow.episodes.size})",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
+            SeasonDropdown(
+                seasons = seasons,
+                selectedSeason = selectedSeason,
+                onSeasonSelected = { viewModel.selectSeason(it) }
             )
         }
 
-        items(tvShow.episodes) { episode ->
+        item {
+            Text(
+                text = if (selectedSeason != null) {
+                    "Épisodes de la saison $selectedSeason (${filteredEpisodes.size})"
+                } else {
+                    "Tous les épisodes (${tvShow.episodes.size})"
+                },
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
+
+        items(filteredEpisodes) { episode ->
             EpisodeCard(episode = episode)
         }
     }
@@ -245,6 +293,61 @@ fun EpisodeCard(episode: Episode) {
                 fontSize = 14.sp,
                 color = Color.Gray
             )
+        }
+    }
+}
+
+@Composable
+fun SeasonDropdown(
+    seasons: List<Int>,
+    selectedSeason: Int?,
+    onSeasonSelected: (Int?) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Filtrer par saison",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            
+            OutlinedButton(
+                onClick = { expanded = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = if (selectedSeason != null) "Saison $selectedSeason" else "Toutes les saisons",
+                    modifier = Modifier.weight(1f)
+                )
+                Text("▼")
+            }
+            
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Toutes les saisons") },
+                    onClick = {
+                        onSeasonSelected(null)
+                        expanded = false
+                    }
+                )
+                seasons.forEach { season ->
+                    DropdownMenuItem(
+                        text = { Text("Saison $season") },
+                        onClick = {
+                            onSeasonSelected(season)
+                            expanded = false
+                        }
+                    )
+                }
+            }
         }
     }
 }

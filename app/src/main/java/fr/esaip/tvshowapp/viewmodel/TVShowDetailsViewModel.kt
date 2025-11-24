@@ -21,6 +21,13 @@ class TVShowDetailsViewModel @Inject constructor(
     private var _tvShowDetailsState = MutableStateFlow<UiState<TvShowXX>>(UiState.Loading)
     val tvShowDetailsState = _tvShowDetailsState.asStateFlow()
 
+    private var _selectedSeason = MutableStateFlow<Int?>(null)
+    val selectedSeason = _selectedSeason.asStateFlow()
+
+    fun selectSeason(season: Int?) {
+        _selectedSeason.value = season
+    }
+
     fun getTVShowDetails(id: Int) = viewModelScope.launch {
         tvShowRepository.getTVShowDetails(id)
             .onStart { _tvShowDetailsState.value = UiState.Loading }
